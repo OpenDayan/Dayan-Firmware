@@ -1,20 +1,27 @@
-#define BOOTADDR_REG 0x1000
+#define MAILBOX_BASE 0x1000
+#define CLINT_BASE 0x2000000
 
 // boot all cores (only hart 0) and jump to main program execution
 .section .text.start, "ax", @progbits
 .globl _start
 _start:
-  li a1, 0x2000000 // base address of clint
   csrr a0, mhartid
-  bnez a0, boot_core
-  addi a2, a1, 4
-  li a3, 1
-interrupt_loop: // trigger MSIP interrupts for other harts so that they also boot
-  sw a3, 0(a2)
-  addi a2, a2, 4
-  lw a3, -4(a2)
-  bnez a3, interrupt_loop
-  j boot_core_hart0
+  li a1, MAILBOX_BASE // base address of mailbox
+  sll t0, a0,  2      // get clint offset
+  li a2, CLINT_BASE   // base address of clint
+  sll t1, a0, 12      // get 4K mailbox offset
+  add a1, t0, a1      // get real mailbox
+  add a2, t1, a2      // get real clint
+  sw zero, 0(a2)      // clear the interrupt
+#if __riscv_xlen == 32
+  lw a3, 0(a1)        // get boot address from mailbox register0
+#else
+  ld a3, 0(a1)        // get boot address from mailbox register0
+#endif
+  csrw mepc, a3       // return from interrupt to start of user program
+  li a2, 0x80         // set mstatus MPIE to 0
+  csrc mstatus, a2
+  mret
 
 // this boot ROM doesn't know about any boot devices, so it just spins,
 // waiting for the serial interface to load the program and interrupt it
@@ -44,27 +51,6 @@ wfi_loop: // wait for MSIP interrupt to start program execution
 .globl _hang80
 _hang80:
   j _hang
-
-// other harts must wait until MSIP of hart 0 is cleared to continue
-boot_core:
-  lw t0, 0(a1)       // load hart 0 MSIP
-  bnez t0, boot_core // block until hart 0 clears own MSIP
-  sll a0, a0, 2      // offset for hart MSIP
-  add a1, a0, a1
-boot_core_hart0:      // begin executing code at DRAM_BASE
-  sw zero, 0(a1)      // clear the interrupt
-  li a0, BOOTADDR_REG // program reset vector
-#if __riscv_xlen == 32
-  lw a0, 0(a0)        // get boot address from bootaddr_reg SCR
-#else
-  ld a0, 0(a0)        // get boot address from bootaddr_reg SCR
-#endif
-  csrw mepc, a0       // return from interrupt to start of user program
-  csrr a0, mhartid    // hartid for next level bootloader
-  la a1, _dtb         // dtb address for next level bootloader
-  li a2, 0x80         // set mstatus MPIE to 0
-  csrc mstatus, a2
-  mret
 
 .align 3
 _dtb:
