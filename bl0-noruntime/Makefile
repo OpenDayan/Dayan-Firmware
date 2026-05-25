@@ -11,7 +11,7 @@ all: bootrom.img bootrom.elf bootrom.objdump
 	$(OBJDUMP) $< -S >$@
 
 %.img: %.bin
-	dd if=$< of=$@ bs=128 count=1
+	dd if=$< of=$@ bs=128 conv=sync
 
 %.bin: %.elf
 	$(OBJCOPY) -O binary $< $@
