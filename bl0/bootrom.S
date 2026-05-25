@@ -1,5 +1,5 @@
 #define MAILBOX_BASE 0x1000
-#define CLINT_BASE 0x2000000
+#define CLINT_BASE 0x20000
 
 // boot all cores (only hart 0) and jump to main program execution
 .section .text.start, "ax", @progbits

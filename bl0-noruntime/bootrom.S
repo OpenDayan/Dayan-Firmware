@@ -1,8 +1,10 @@
+#define CLINT_BASE 0x20000
+
 // boot all cores (only hart 0) and jump to main program execution
 .section .text.start, "ax", @progbits
 .globl _start
 _start:
-  li a1, 0x2000000 // base address of clint
+  li a1, CLINT_BASE // base address of clint
   csrr a0, mhartid
   bnez a0, boot_core
   addi a2, a1, 4
@@ -37,7 +39,7 @@ _hang: // reset vector
   csrr a0, mhartid
   bnez a0, wfi_loop
   // 构造中断
-  li a1, 0x2000000 // base address of clint
+  li a1, CLINT_BASE // base address of clint
   li a3, 1
   sw a3, 0(a1)
 
