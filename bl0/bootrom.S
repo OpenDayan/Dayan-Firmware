@@ -8,7 +8,7 @@ _start:
   csrr a0, mhartid
   li a1, MAILBOX_BASE // base address of mailbox
   li a2, CLINT_BASE   // base address of clint
-  sll t0, a0, 12      // get 4K mailbox offset
+  sll t0, a0,  3      // get 8B boot-address-reg offset
   sll t1, a0,  2      // get clint offset
   add a1, t0, a1      // get real mailbox
   add a2, t1, a2      // get real clint
