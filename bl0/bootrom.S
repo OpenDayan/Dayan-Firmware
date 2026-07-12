@@ -12,12 +12,16 @@ _start:
   sll t1, a0,  2      // get clint offset
   add a1, t0, a1      // get real mailbox
   add a2, t1, a2      // get real clint
-  sw zero, 0(a2)      // clear the interrupt
 #if __riscv_xlen == 32
   lw a3, 0(a1)        // get boot address from mailbox register0
 #else
   ld a3, 0(a1)        // get boot address from mailbox register0
 #endif
+  // Consuming the mailbox before clearing MSIP makes the clear an
+  // acknowledgement. The host may reuse the mailbox only after observing it.
+  fence iorw, iorw
+  sw zero, 0(a2)      // acknowledge the interrupt
+  fence iorw, iorw
   csrw mepc, a3       // return from interrupt to start of user program
   li a2, 0x80         // set mstatus MPIE to 0
   csrc mstatus, a2
